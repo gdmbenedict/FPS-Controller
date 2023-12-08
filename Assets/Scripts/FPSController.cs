@@ -7,6 +7,7 @@ public class FPSController : MonoBehaviour
     //movement settings
     [Header("Movement Settings")]
     [SerializeField] private float walkSpeed = 3f;
+    [SerializeField] private float runSpeed = 6f;
 
     //mouse settings
     [Header("Mouse Settings")]
@@ -74,9 +75,25 @@ public class FPSController : MonoBehaviour
         float x = Input.GetAxis("Horizontal");
         float z = Input.GetAxis("Vertical");
 
-        Vector3 move = transform.right * x + transform.forward * z;
+        //getting unit vector for direction
+        Vector3 move = Vector3.ClampMagnitude(transform.right * x + transform.forward * z, 1.0f);
 
-        characterController.Move(move * walkSpeed * Time.deltaTime);
+        //determine movement speed
+        if (Input.GetButton("Run"))
+        {
+            move *= runSpeed;
+        }
+        else
+        {
+            move *= walkSpeed;
+        }
+
+        //applying speed
+        if (isGrounded)
+        {
+            velocity.x = move.x;
+            velocity.z = move.z;
+        }
 
         //applying gravity
         velocity.y += gravity * Time.deltaTime;

@@ -47433,6 +47433,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   walkSpeed: 5
+  runSpeed: 7
   mouseSensativity: 300
   maxDown: -90
   maxUp: 90
