@@ -8,6 +8,7 @@ public class FPSController : MonoBehaviour
     [Header("Movement Settings")]
     [SerializeField] private float walkSpeed = 3f;
     [SerializeField] private float runSpeed = 6f;
+    [SerializeField] private float crouchSpeed = 2f;
 
     //mouse settings
     [Header("Mouse Settings")]
@@ -24,6 +25,7 @@ public class FPSController : MonoBehaviour
     //jumping
     [Header("Jumping")]
     [SerializeField] private float jumpHeight = 2f;
+    [SerializeField] private float airMovementFactor = 2f;
 
     //floor checking
     [Header("Floor Checking")]
@@ -31,6 +33,19 @@ public class FPSController : MonoBehaviour
     [SerializeField] private float groundDistance;
     [SerializeField] private LayerMask groundLayerMask;
     private bool isGrounded;
+
+    //Crouching
+    [Header("Chrouching Varaibles")]
+    [SerializeField] private float crouchingHeight = 0.5f;
+    [SerializeField] private Vector3 crouchingCenter = new Vector3(0f, 0.5f, 0f);
+    [SerializeField] private float crouchTransitionTime = 0.5f;
+    private bool isCrouching;
+    private bool isTransitioning;
+
+    //standing
+    [Header("Standing Varaibles")]
+    [SerializeField] private float standingHeight = 2f;
+    [SerializeField] private Vector3 standingCenter = new Vector3(0f, 2f, 0f);
 
     //external variables
     [Header("External Variables")]
@@ -59,10 +74,11 @@ public class FPSController : MonoBehaviour
 
         HandleMouse();
         HandleMovement();
+        HandleCourch();
     }
 
     //method to handle the movement of a player
-    void HandleMovement()
+    private void HandleMovement()
     {
         //resetting velocity if grounded
         if (isGrounded && velocity.y < 0)
@@ -79,20 +95,30 @@ public class FPSController : MonoBehaviour
         Vector3 move = Vector3.ClampMagnitude(transform.right * x + transform.forward * z, 1.0f);
 
         //determine movement speed
-        if (Input.GetButton("Run"))
+        if (Input.GetButton("Run") && isGrounded && !isCrouching)
         {
             move *= runSpeed;
+        }
+        else if (isCrouching && isGrounded)
+        {
+            move *= crouchSpeed;
         }
         else
         {
             move *= walkSpeed;
         }
 
-        //applying speed
+        //applying movement on ground
         if (isGrounded)
         {
             velocity.x = move.x;
             velocity.z = move.z;
+        }
+        //applying movement in air
+        else
+        {
+            velocity.x += move.x * airMovementFactor * Time.deltaTime;
+            velocity.z += move.z * airMovementFactor * Time.deltaTime;
         }
 
         //applying gravity
@@ -110,7 +136,7 @@ public class FPSController : MonoBehaviour
     }
 
     //method that handles mouse inputs
-    void HandleMouse()
+    private void HandleMouse()
     {
         //getting mouse inputs
         float mouseX = Input.GetAxis("Mouse X") * mouseSensativity * Time.deltaTime;
@@ -124,5 +150,64 @@ public class FPSController : MonoBehaviour
         xRotation = Mathf.Clamp(xRotation, maxDown, maxUp);
 
         playerCamera.GetComponent<Transform>().localRotation = Quaternion.Euler(xRotation, 0f, 0f);
+    }
+
+    //method to handle crouching
+    private void HandleCourch()
+    {
+        //determine if player can crouch
+        if (isGrounded && !isTransitioning && Input.GetButtonDown("Crouch") && !isCrouching)
+        {
+            StartCoroutine(CrouchStand());
+        }
+
+        //unchrouching
+        if (!Input.GetButton("Crouch") && isCrouching)
+        {
+            StopAllCoroutines();
+            
+            StartCoroutine(CrouchStand());
+        }
+    }
+
+
+    //method to handle transitioning from crouching to standing or vice-versa
+    private IEnumerator CrouchStand()
+    {
+        //check for cieling above player while uncrouching
+        if (isCrouching && Physics.Raycast(playerCamera.transform.position, Vector3.up, 1f))
+        {
+            //if cieling is above player cancel co-routine
+            yield break;
+        }
+
+        isTransitioning = true;
+
+        //setting transition variables
+        float timeElapsed = 0;
+        float targetHeight = isCrouching ? standingHeight : crouchingHeight;
+        float currentHeight = characterController.height;
+        Vector3 targetCenter = isCrouching ? standingCenter : crouchingCenter;
+        Vector3 currentCenter = characterController.center;
+
+        isCrouching = !isCrouching;
+
+        //while in transition time window
+        while (timeElapsed < crouchTransitionTime)
+        {
+            //changing height and center point of character controller
+            characterController.height = Mathf.Lerp(currentHeight, targetHeight, timeElapsed/crouchTransitionTime);
+            characterController.center = Vector3.Lerp(currentCenter, targetCenter, timeElapsed/crouchTransitionTime);
+            
+            //increment time and wait for next frame
+            timeElapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        //ensuring correct final position
+        characterController.height = targetHeight;
+        characterController.center = targetCenter;
+
+        isTransitioning = false;
     }
 }
