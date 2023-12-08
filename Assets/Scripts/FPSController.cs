@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class FPSController : MonoBehaviour
@@ -29,7 +30,7 @@ public class FPSController : MonoBehaviour
 
     //floor checking
     [Header("Floor Checking")]
-    [SerializeField] private Transform groundCheck;
+    [SerializeField] private GameObject groundCheck;
     [SerializeField] private float groundDistance;
     [SerializeField] private LayerMask groundLayerMask;
     private bool isGrounded;
@@ -70,7 +71,7 @@ public class FPSController : MonoBehaviour
     void Update()
     {
         //check to see if grounded
-        isGrounded = Physics.CheckSphere(groundCheck.position, groundDistance, groundLayerMask);
+        isGrounded = Physics.CheckSphere(groundCheck.transform.position, groundDistance, groundLayerMask);
 
         HandleMouse();
         HandleMovement();
@@ -185,10 +186,16 @@ public class FPSController : MonoBehaviour
 
         //setting transition variables
         float timeElapsed = 0;
+
         float targetHeight = isCrouching ? standingHeight : crouchingHeight;
         float currentHeight = characterController.height;
+
         Vector3 targetCenter = isCrouching ? standingCenter : crouchingCenter;
         Vector3 currentCenter = characterController.center;
+
+        //moving groound check
+        float groundCheckMove = isCrouching ? -1f : 1f;
+        groundCheck.transform.position += new Vector3(0, groundCheckMove, 0);
 
         isCrouching = !isCrouching;
 
