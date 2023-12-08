@@ -20,8 +20,24 @@ public class FPSController : MonoBehaviour
     private CharacterController characterController;
     private Transform playerBody;
 
+    //jumping
+    [Header("Jumping")]
+    [SerializeField] private float jumpHeight = 2f;
+
+    //floor checking
+    [Header("Floor Checking")]
+    [SerializeField] private Transform groundCheck;
+    [SerializeField] private float groundDistance;
+    [SerializeField] private LayerMask groundLayerMask;
+    private bool isGrounded;
+
+    //external variables
+    [Header("External Variables")]
+    [SerializeField] private float gravity = -9.81f;
+
     //other variables
     private float xRotation = 0f;
+    [SerializeField]  private Vector3 velocity;
 
     // Start is called before the first frame update
     void Start()
@@ -37,6 +53,9 @@ public class FPSController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        //check to see if grounded
+        isGrounded = Physics.CheckSphere(groundCheck.position, groundDistance, groundLayerMask);
+
         HandleMouse();
         HandleMovement();
     }
@@ -44,6 +63,13 @@ public class FPSController : MonoBehaviour
     //method to handle the movement of a player
     void HandleMovement()
     {
+        //resetting velocity if grounded
+        if (isGrounded && velocity.y < 0)
+        {
+            //not zero to make sure that player actually reaches the ground
+            velocity.y = -2f;
+        }
+
         //getting player input;
         float x = Input.GetAxis("Horizontal");
         float z = Input.GetAxis("Vertical");
@@ -51,6 +77,19 @@ public class FPSController : MonoBehaviour
         Vector3 move = transform.right * x + transform.forward * z;
 
         characterController.Move(move * walkSpeed * Time.deltaTime);
+
+        //applying gravity
+        velocity.y += gravity * Time.deltaTime;
+        
+        //jumping
+        if (isGrounded && Input.GetButtonDown("Jump"))
+        {
+            velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
+        }
+
+        //moving character
+        characterController.Move(velocity * Time.deltaTime);
+
     }
 
     //method that handles mouse inputs
